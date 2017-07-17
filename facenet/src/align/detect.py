@@ -45,10 +45,22 @@ import numpy as np
 #For each face in that image, predict the attributes of that face
 
 def main(args):
+
+    #MOON feature extractor; not sure how to make this a modular component
     symbol = lightened_moon_feature(num_classes=40, use_fuse=True)
+
+    #the detector passed in from the command line; requires files in facenet/data/
     detector = align_dlib.AlignDlib(os.path.expanduser(args.dlib_face_predictor))
+
+    #fixed landmark indices; could make modular, but later
     landmarkIndices = align_dlib.AlignDlib.OUTER_EYES_AND_NOSE
+
+    #TODO: change to a video file, and process by frame
     img = cv2.imread(args.input_img)
+
+    #TODO: this is the main problem: cropped_face refers to the already-aligned faces
+    # in this code, this face is used for a few things
+    #  1) to feed into the attribute classifier
     cropped_face = cv2.imread(args.cropped_img)
     scale = float(args.face_size) / args.image_size
     devs = mx.cpu()
@@ -67,7 +79,8 @@ def main(args):
         print('cannot find faces')
 
     for box in face_boxes:
-        #print(dlib.rectangle.left(box))
+
+        #=========DRAW BOUNDING BOX=========
         pad = [0.25, 0.25, 0.25, 0.25]
         left = int(max(0, box.left() - box.width()*float(pad[0])))
         top = int(max(0, box.top() - box.height()*float(pad[1])))
@@ -76,6 +89,7 @@ def main(args):
 
         cv2.rectangle(img, (left, top), (right, bottom), (0,255,0),3)       
         
+        #========EXTRACT ATTRIBUTES=======
         # crop face area
         gray = cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, (128, 128))/255.0
@@ -89,14 +103,14 @@ def main(args):
         exector.forward(is_train=False)
         exector.outputs[0].wait_to_read()
         output = exector.outputs[0].asnumpy()
-        print(output)
         text = ["5_o_Clock_Shadow","Arched_Eyebrows","Attractive","Bags_Under_Eyes","Bald", "Bangs","Big_Lips","Big_Nose",
                 "Black_Hair","Blond_Hair","Blurry","Brown_Hair","Bushy_Eyebrows","Chubby","Double_Chin","Eyeglasses","Goatee",
                 "Gray_Hair", "Heavy_Makeup","High_Cheekbones","Male","Mouth_Slightly_Open","Mustache","Narrow_Eyes","No_Beard",
                 "Oval_Face","Pale_Skin","Pointy_Nose","Receding_Hairline","Rosy_Cheeks","Sideburns","Smiling","Straight_Hair",
                 "Wavy_Hair","Wearing_Earrings","Wearing_Hat","Wearing_Lipstick","Wearing_Necklace","Wearing_Necktie","Young"]
         pred = np.ones(40)
-        #TODO process face qualities
+
+        #=========WRITE ATTRIBUTES W/ YES NEXT TO BOUNDING BOX============
         yes_attributes = []
         index = 0
 
@@ -107,12 +121,12 @@ def main(args):
 
         pad = 20
         for attr in yes_attributes:
-            cv2.putText(img, attr, (right, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 2)
+            cv2.putText(img, attr, (right, top), cv2.FONT_HERSHEY_SIMPLEX, 0.25, (0,0,255), 2)
             top = top + pad
 
+        #========TODO ADD IN IDENTIFICATION WITH MXNET==========
 
-    cv2.imshow('detected faces', img)
-    cv2.waitKey(0)
+#may need a helper method processFrame() to make code cleaner
 
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
