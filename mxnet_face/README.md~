@@ -10,7 +10,7 @@ Using mxnet for face-related algorithm, here now only provide :
 * a trained lightened moon[1][2] model (combine the changed lightened cnn and moon loss) on **Face Attribute Prediction**, together with the training script, the single model get about *87.41%* accuracy on CelebA, and with only 18MB size.
 
 
-Before running
+Before runing
 -----------
 ```
 cd model
