@@ -128,6 +128,11 @@ def main(args):
 
 #may need a helper method processFrame() to make code cleaner
 
+#currently, the following supporting files from mxnet-face and facenet are needed:
+# ../data/shape_predictor_68_face_landmarks.dat from facenet
+# lightened_moon.py from mxnet-face (should be in attribute)
+# 
+
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     
