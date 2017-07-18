@@ -40,6 +40,7 @@ import mxnet as mx
 import pdb
 from lightened_moon import lightened_moon_feature
 import numpy as np
+import face_recognition
 
 #Given an image, draw bounding boxes for all faces detected in the image
 #For each face in that image, predict the attributes of that face
@@ -80,21 +81,26 @@ def main(args):
     #a list of dictionaries containing face_output for each frame
     total_output = []
 
+    #maps encoding matrix to id number
+    known_faces_dict = dict()
+
+    known_faces_encoding = []
+
     while ret is True:
         face_boxes = detector.getAllFaceBoundingBoxes(frame)
-        face_output = self.processFrame(args, frame, symbol, detector, landmarkIndices, devs, face_boxes)
+        id_attr, known_faces_dict, known_faces_encoding = self.processFrame(args, frame, known_faces_dict, known_faces_encoding, symbol, detector, landmarkIndices, devs, face_boxes)
 
         if total_output is None:
-            total_output = [face_output]
+            total_output = [id_attr]
         else:
-            total_output = total_output.append(face_output)
+            total_output = total_output.append(id_attr)
 
         ret, frame = video.read()
 
     #==========TODO CONVERT TO JSON FILE===============
     print(total_output)
 
-def processFrame(self, args, frame, symbol, detector, landmarkIndices, devs, face_boxes):
+def processFrame(self, args, frame, known_faces_dict, known_faces_encoding, symbol, detector, landmarkIndices, devs, face_boxes):
 
     if len(face_boxes) == 0:
         print('cannot find faces')
@@ -165,9 +171,14 @@ def processFrame(self, args, frame, symbol, detector, landmarkIndices, devs, fac
         #this is tricky because there may be many faces in the frame
         #so for each face in the frame (aka iterate through exector.outputs[index]) compile a dict
 
-        ret = dict()
-        
-        return ret
+        #trickier still: need to use the face_recognition library to compare faces.
+        # perhaps a dict used to store the list of known faces:id
+        # compare current unknown face with all the keys (known faces), and if nothing
+        # matches, add to dict with new id
+
+        id_attr = dict()
+
+        return id_attr, known_faces_dict, known_faces_encoding
 
 
 
