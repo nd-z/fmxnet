@@ -83,12 +83,12 @@ def main(args):
 
     #maps encoding matrix to id number
     known_faces_dict = dict()
-
     known_faces_encoding = []
+    id_count = 0
 
     while ret is True:
         face_boxes = detector.getAllFaceBoundingBoxes(frame)
-        id_attr, known_faces_dict, known_faces_encoding = self.processFrame(args, frame, known_faces_dict, known_faces_encoding, symbol, detector, landmarkIndices, devs, face_boxes)
+        id_attr, known_faces_dict, known_faces_encoding, id_count = self.processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes)
 
         if total_output is None:
             total_output = [id_attr]
@@ -100,10 +100,12 @@ def main(args):
     #==========TODO CONVERT TO JSON FILE===============
     print(total_output)
 
-def processFrame(self, args, frame, known_faces_dict, known_faces_encoding, symbol, detector, landmarkIndices, devs, face_boxes):
+def processFrame(self, args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes):
 
     if len(face_boxes) == 0:
         print('cannot find faces')
+
+    id_attr = dict()
 
     for box in face_boxes:
 
@@ -163,7 +165,7 @@ def processFrame(self, args, frame, known_faces_dict, known_faces_encoding, symb
             cv2.putText(img, attr, (right, top), cv2.FONT_HERSHEY_SIMPLEX, 0.25, (0,0,255), 2)
             top = top + pad
         '''
-        #========TODO ADD IN IDENTIFICATION WITH MXNET==========
+        #========TODO ADD IN IDENTIFICATION==========
 
 
         #========TODO WRITE ATTRIBUTES AND ID TO DICT===========
@@ -176,9 +178,45 @@ def processFrame(self, args, frame, known_faces_dict, known_faces_encoding, symb
         # compare current unknown face with all the keys (known faces), and if nothing
         # matches, add to dict with new id
 
-        id_attr = dict()
+        #get encoding matrix of the face
+        face_enc = face_recognition.face_encodings(cropped_face)
 
-        return id_attr, known_faces_dict, known_faces_encoding
+        if face_enc is None:
+            print('didnt catch this face')
+            continue
+
+        face_enc = face_enc[0]
+
+        if known_faces_encoding is None:
+            known_faces_dict[face_enc] = id_count
+            id_count += 1
+            continue
+
+        compare_results = face_recognition.compare_faces(known_faces_encoding, face_enc)
+
+        index = 0
+        identifier = None
+
+        while index < len(compare_results):
+            result = compare_results[index]
+            if result is True:
+                identifier = known_faces_encoding[index]
+                break
+
+        if identifier is None:
+            #add to dict and known encodings
+            known_faces_encoding = known_faces_encoding.append(face_enc)
+            known_faces_dict[face_enc] = id_count
+            id_count += 1
+        else:
+            #get the encoding that was True via the index and add to json dict
+            similar_encoding = known_faces_encoding[index]
+            projected_id = known_faces_dict[similar_encoding]
+
+            #TODO add to dictionary
+
+
+    return id_attr, known_faces_dict, known_faces_encoding
 
 
 
