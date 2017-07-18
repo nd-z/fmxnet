@@ -44,6 +44,13 @@ import numpy as np
 #Given an image, draw bounding boxes for all faces detected in the image
 #For each face in that image, predict the attributes of that face
 
+#two tasks to do
+
+# 1) given a video, output JSON of all the features for each face found
+    #probably also need to assign each face an ID, and keep recognition throughout the frames
+
+# 2) given a video and a JSON containing that information, produce a frame-by-frame visualization of the faces/attributes detected
+
 def main(args):
 
     #MOON feature extractor; not sure how to make this a modular component
@@ -56,38 +63,63 @@ def main(args):
     landmarkIndices = align_dlib.AlignDlib.OUTER_EYES_AND_NOSE
 
     #TODO: change to a video file, and process by frame
-    img = cv2.imread(args.input_img)
+    video = cv2.VideoCapture(args.input_video)
 
     #TODO: this is the main problem: cropped_face refers to the already-aligned faces
     # in this code, this face is used for a few things
     #  1) to feed into the attribute classifier
-    cropped_face = cv2.imread(args.cropped_img)
-    scale = float(args.face_size) / args.image_size
+    #cropped_face = cv2.imread(args.cropped_img)
+    #scale = float(args.face_size) / args.image_size
+    #for now, solution is to ignore altogether
+
     devs = mx.cpu()
 
-    '''
-    aligned = detector.align(args.image_size, img, landmarkIndices=landmarkIndices, skipMulti=False, scale=scale)
+    #begin to iterate over the frames and process them
+    ret, frame = video.read()
 
-    if aligned is None:
-        print('Failed to align')
-        return
-    '''
+    #a list of dictionaries containing face_output for each frame
+    total_output = []
 
-    face_boxes = detector.getAllFaceBoundingBoxes(img)
+    while ret is True:
+        face_boxes = detector.getAllFaceBoundingBoxes(frame)
+        face_output = self.processFrame(args, frame, symbol, detector, landmarkIndices, devs, face_boxes)
+
+        if total_output is None:
+            total_output = [face_output]
+        else:
+            total_output = total_output.append(face_output)
+
+        ret, frame = video.read()
+
+    #==========TODO CONVERT TO JSON FILE===============
+    print(total_output)
+
+def processFrame(self, args, frame, symbol, detector, landmarkIndices, devs, face_boxes):
 
     if len(face_boxes) == 0:
         print('cannot find faces')
 
     for box in face_boxes:
 
-        #=========DRAW BOUNDING BOX=========
+        #=========CROP FACE==========
         pad = [0.25, 0.25, 0.25, 0.25]
         left = int(max(0, box.left() - box.width()*float(pad[0])))
         top = int(max(0, box.top() - box.height()*float(pad[1])))
         right = int(min(img.shape[1], box.right() + box.width()*float(pad[2])))
         bottom = int(min(img.shape[0], box.bottom()+box.height()*float(pad[3])))
 
-        cv2.rectangle(img, (left, top), (right, bottom), (0,255,0),3)       
+        cropped_face = frame[top:bottom, left:right]
+
+        #=========DRAW BOUNDING BOX=========
+        '''
+        pad = [0.25, 0.25, 0.25, 0.25]
+        left = int(max(0, box.left() - box.width()*float(pad[0])))
+        top = int(max(0, box.top() - box.height()*float(pad[1])))
+        right = int(min(img.shape[1], box.right() + box.width()*float(pad[2])))
+        bottom = int(min(img.shape[0], box.bottom()+box.height()*float(pad[3])))
+
+        cv2.rectangle(img, (left, top), (right, bottom), (0,255,0),3) 
+        '''      
         
         #========EXTRACT ATTRIBUTES=======
         # crop face area
@@ -108,9 +140,10 @@ def main(args):
                 "Gray_Hair", "Heavy_Makeup","High_Cheekbones","Male","Mouth_Slightly_Open","Mustache","Narrow_Eyes","No_Beard",
                 "Oval_Face","Pale_Skin","Pointy_Nose","Receding_Hairline","Rosy_Cheeks","Sideburns","Smiling","Straight_Hair",
                 "Wavy_Hair","Wearing_Earrings","Wearing_Hat","Wearing_Lipstick","Wearing_Necklace","Wearing_Necktie","Young"]
-        pred = np.ones(40)
+        #pred = np.ones(40)
 
         #=========WRITE ATTRIBUTES W/ YES NEXT TO BOUNDING BOX============
+        '''
         yes_attributes = []
         index = 0
 
@@ -123,21 +156,33 @@ def main(args):
         for attr in yes_attributes:
             cv2.putText(img, attr, (right, top), cv2.FONT_HERSHEY_SIMPLEX, 0.25, (0,0,255), 2)
             top = top + pad
-
+        '''
         #========TODO ADD IN IDENTIFICATION WITH MXNET==========
+
+
+        #========TODO WRITE ATTRIBUTES AND ID TO DICT===========
+
+        #this is tricky because there may be many faces in the frame
+        #so for each face in the frame (aka iterate through exector.outputs[index]) compile a dict
+
+        ret = dict()
+        
+        return ret
+
+
 
 #may need a helper method processFrame() to make code cleaner
 
 #currently, the following supporting files from mxnet-face and facenet are needed:
 # ../data/shape_predictor_68_face_landmarks.dat from facenet
 # lightened_moon.py from mxnet-face (should be in attribute)
-# 
+# lightened_moon folder containing lightened_moon_fuse from model folder in mxnet-face
 
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('input_img', type=str, help='Target image.')
-    parser.add_argument('cropped_img', type=str, help='Cropped face')
+    parser.add_argument('input_video', type=str, help='Target image.')
+    #parser.add_argument('cropped_img', type=str, help='Cropped face')
     parser.add_argument('--dlib_face_predictor', type=str,
         help='File containing the dlib face predictor.', default='../data/shape_predictor_68_face_landmarks.dat')
     parser.add_argument('--image_size', type=int,
@@ -153,8 +198,8 @@ def parse_arguments(argv):
 
     parser.add_argument('--size', type=int, default=128,
                         help='the image size of lfw aligned image, only support squre size')
-    parser.add_argument('--opencv', type=str, default='~/Desktop/mxnet-face/model/opencv/cascade.xml',
-                        help='the opencv model path')
+    #parser.add_argument('--opencv', type=str, default='~/Desktop/mxnet-face/model/opencv/cascade.xml',
+    #                    help='the opencv model path')
     parser.add_argument('--pad', type=float, nargs='+',
                                  help="pad (left,top,right,bottom) for face detection region")
     parser.add_argument('--model-load-prefix', type=str, default='lightened_moon/lightened_moon_fuse',
