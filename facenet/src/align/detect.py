@@ -155,8 +155,8 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 		i = 0
 		for num in output[0]:
 			if num > 0:
-				attr_list.append(text[index])
-			i+=1
+		        	attr_list.append(text[i])
+			    	i+=1
 		#=========WRITE ATTRIBUTES W/ YES NEXT TO BOUNDING BOX============
 		'''
 		yes_attributes = []
@@ -207,12 +207,13 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 		#print(face_enc_hashable[0])
 
 		if len(known_faces_encoding) == 0:
-			#print('first known face!')
+			print('first known face!')
 			known_faces_dict[face_enc_hashable] = id_count
 			known_faces_encoding = [face_enc]
 			id_l = [id_count]
-			total_list = id_l.extend(attr_list)
-			id_attr[face_num] = total_list
+			id_l.extend(attr_list)
+			print('This should have at least one element: ' + str(id_l))
+			id_attr[face_num] = id_l
 			id_count += 1
 			#print('added to dict of known faces')
 			continue
@@ -237,8 +238,9 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 			known_faces_encoding = np.append(known_faces_encoding, [face_enc], axis=0)
 			known_faces_dict[face_enc_hashable] = id_count
 			id_l = [id_count]
-			total_list = id_l.extend(attr_list)
-			id_attr[face_num] = total_list
+			id_l.extend(attr_list)
+			print('This should have at least one element: ' + str(id_l))
+			id_attr[face_num] = id_l
 			id_count += 1
 			#print(known_faces_dict)
 			#cv2.imshow('cropped face', cropped_face)
@@ -250,8 +252,9 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 			similar_encoding_hash = similar_encoding.flatten()[0]
 			projected_id = known_faces_dict[similar_encoding_hash]
 			id_l = [projected_id]
-			total_list = id_l.extend(attr_list)
-			id_attr[face_num] = total_list
+			id_l.extend(attr_list)
+			print('This should have at least one element: ' + str(id_l))
+			id_attr[face_num] = id_l
 
 		#TODO add to dictionary
 		#so at the end of all of this, you have known_faces_dict, known_faces_encoding,
