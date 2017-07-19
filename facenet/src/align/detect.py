@@ -40,7 +40,7 @@ import mxnet as mx
 import pdb
 from lightened_moon import lightened_moon_feature
 import numpy as np
-#import face_recognition
+import face_recognition
 
 #Given an image, draw bounding boxes for all faces detected in the image
 #For each face in that image, predict the attributes of that face
@@ -179,10 +179,10 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 		# matches, add to dict with new id
 
 		#get encoding matrix of the face
-		#face_enc[0] is a 128-dim encoding for the face in question
-		print('trying to get encoding for this face:')
-		cv2.imshow('cropped face', cropped_face)
-		cv2.waitKey(0)
+		#face_enc[0] is a row vector of shape (128,)
+		#print('trying to get encoding for this face:')
+		#cv2.imshow('cropped face', cropped_face)
+		#cv2.waitKey(0)
 		face_enc = face_recognition.face_encodings(cropped_face)
 
 		if face_enc is None:
@@ -193,44 +193,53 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 			print('didnt catch this face with face_recognition')
 			continue
 
-		print('got the encoding; flattening and using first element as hash index')
+		#print('got the encoding; flattening and using first element as hash index')
 		face_enc = face_enc[0]
+                #print(face_enc.shape)
 		face_enc_hashable = face_enc.flatten()[0]
 		#print(face_enc_hashable[0])
 
-		if known_faces_encoding is None:
-			print('first known face!')
+		if len(known_faces_encoding) == 0:
+			#print('first known face!')
 			known_faces_dict[face_enc_hashable] = id_count
+                        known_faces_encoding = [face_enc]
 			id_count += 1
-			print('added to dict of known faces')
+			#print('added to dict of known faces')
 			continue
 
-		print('comparing with list of known faces')
+		#print('comparing with list of known faces')
 		compare_results = face_recognition.compare_faces(known_faces_encoding, face_enc)
 
 		index = 0
 		identifier = None
-
+                #print(compare_results)
+                #print('done comparisons on known faces; looking for a match')
 		while index < len(compare_results):
 			result = compare_results[index]
-			if result is True:
+			if result:
 				identifier = known_faces_encoding[index]
 				break
+                        index += 1
 
 		if identifier is None:
+                        #print('no match; adding this face to the list with new id')
 			#add to dict and known encodings
-			known_faces_encoding.append(face_enc)
+			known_faces_encoding = np.append(known_faces_encoding, [face_enc], axis=0)
 			known_faces_dict[face_enc_hashable] = id_count
 			id_count += 1
+                        #print(known_faces_dict)
+                        cv2.imshow('cropped face', cropped_face)
+                        cv2.waitKey(0)
 		else:
+                        #print('we have a match! getting id from match')
 			#get the encoding that was True via the index and add to json dict
 			similar_encoding = known_faces_encoding[index]
 			similar_encoding_hash = similar_encoding.flatten()[0]
 			projected_id = known_faces_dict[similar_encoding_hash]
 
-			#TODO add to dictionary
+		#TODO add to dictionary
 
-		print(id_attr)
+		#print(id_attr)
 
 	return id_attr, known_faces_dict, known_faces_encoding, id_count
 
