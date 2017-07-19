@@ -241,8 +241,8 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 			id_attr[face_num] = total_list
 			id_count += 1
 			#print(known_faces_dict)
-			cv2.imshow('cropped face', cropped_face)
-			cv2.waitKey(0)
+			#cv2.imshow('cropped face', cropped_face)
+			#cv2.waitKey(0)
 		else:
 			#print('we have a match! getting id from match')
 			#get the encoding that was True via the index and add to json dict
