@@ -103,9 +103,11 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 	if len(face_boxes) == 0:
 		print('cannot find faces')
 
-	#maps id to list of attributes for that id
+	#list where first entry is id, rest are attributes for that id
+	#key is the face number
 	id_attr = dict()
 
+	face_num = 0
 	for box in face_boxes:
 
 		#=========CROP FACE==========
@@ -208,7 +210,9 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 			#print('first known face!')
 			known_faces_dict[face_enc_hashable] = id_count
 			known_faces_encoding = [face_enc]
-			id_attr[id_count] = attr_list
+			id_l = [id_count]
+			total_list = id_l.extend(attr_list)
+			id_attr[face_num] = total_list
 			id_count += 1
 			#print('added to dict of known faces')
 			continue
@@ -232,6 +236,9 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 			#add to dict and known encodings
 			known_faces_encoding = np.append(known_faces_encoding, [face_enc], axis=0)
 			known_faces_dict[face_enc_hashable] = id_count
+			id_l = [id_count]
+			total_list = id_l.extend(attr_list)
+			id_attr[face_num] = total_list
 			id_count += 1
 			#print(known_faces_dict)
 			cv2.imshow('cropped face', cropped_face)
@@ -242,10 +249,15 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 			similar_encoding = known_faces_encoding[index]
 			similar_encoding_hash = similar_encoding.flatten()[0]
 			projected_id = known_faces_dict[similar_encoding_hash]
+			id_l = [projected_id]
+			total_list = id_l.extend(attr_list)
+			id_attr[face_num] = total_list
 
 		#TODO add to dictionary
 		#so at the end of all of this, you have known_faces_dict, known_faces_encoding,
 		#and id_count
+
+		face_num += 1
 
 	#after running on sample.mp4, should ideally have only 2 entries
 	print(id_attr)
