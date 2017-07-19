@@ -88,12 +88,10 @@ def main(args):
 
 	while ret is True:
 		face_boxes = detector.getAllFaceBoundingBoxes(frame)
+
 		id_attr, known_faces_dict, known_faces_encoding, id_count = processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes)
 
-		if total_output is None:
-			total_output = [id_attr]
-		else:
-			total_output.append(id_attr)
+		total_output.append(id_attr)
 
 		ret, frame = video.read()
 
@@ -105,6 +103,7 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 	if len(face_boxes) == 0:
 		print('cannot find faces')
 
+	#maps id to list of attributes for that id
 	id_attr = dict()
 
 	for box in face_boxes:
@@ -150,6 +149,12 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 				"Wavy_Hair","Wearing_Earrings","Wearing_Hat","Wearing_Lipstick","Wearing_Necklace","Wearing_Necktie","Young"]
 		#pred = np.ones(40)
 
+		attr_list = []
+		i = 0
+		for num in output[0]:
+			if num > 0:
+				attr_list.append(text[index])
+			i+=1
 		#=========WRITE ATTRIBUTES W/ YES NEXT TO BOUNDING BOX============
 		'''
 		yes_attributes = []
@@ -195,14 +200,15 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 
 		#print('got the encoding; flattening and using first element as hash index')
 		face_enc = face_enc[0]
-                #print(face_enc.shape)
+				#print(face_enc.shape)
 		face_enc_hashable = face_enc.flatten()[0]
 		#print(face_enc_hashable[0])
 
 		if len(known_faces_encoding) == 0:
 			#print('first known face!')
 			known_faces_dict[face_enc_hashable] = id_count
-                        known_faces_encoding = [face_enc]
+			known_faces_encoding = [face_enc]
+			id_attr[id_count] = attr_list
 			id_count += 1
 			#print('added to dict of known faces')
 			continue
@@ -212,34 +218,37 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 
 		index = 0
 		identifier = None
-                #print(compare_results)
-                #print('done comparisons on known faces; looking for a match')
+		#print(compare_results)
+		#print('done comparisons on known faces; looking for a match')
 		while index < len(compare_results):
 			result = compare_results[index]
 			if result:
 				identifier = known_faces_encoding[index]
 				break
-                        index += 1
+			index += 1
 
 		if identifier is None:
-                        #print('no match; adding this face to the list with new id')
+			#print('no match; adding this face to the list with new id')
 			#add to dict and known encodings
 			known_faces_encoding = np.append(known_faces_encoding, [face_enc], axis=0)
 			known_faces_dict[face_enc_hashable] = id_count
 			id_count += 1
-                        #print(known_faces_dict)
-                        cv2.imshow('cropped face', cropped_face)
-                        cv2.waitKey(0)
+			#print(known_faces_dict)
+			cv2.imshow('cropped face', cropped_face)
+			cv2.waitKey(0)
 		else:
-                        #print('we have a match! getting id from match')
+			#print('we have a match! getting id from match')
 			#get the encoding that was True via the index and add to json dict
 			similar_encoding = known_faces_encoding[index]
 			similar_encoding_hash = similar_encoding.flatten()[0]
 			projected_id = known_faces_dict[similar_encoding_hash]
 
 		#TODO add to dictionary
+		#so at the end of all of this, you have known_faces_dict, known_faces_encoding,
+		#and id_count
 
-		#print(id_attr)
+	#after running on sample.mp4, should ideally have only 2 entries
+	print(id_attr)
 
 	return id_attr, known_faces_dict, known_faces_encoding, id_count
 
