@@ -40,7 +40,7 @@ import mxnet as mx
 import pdb
 from lightened_moon import lightened_moon_feature
 import numpy as np
-import face_recognition
+#import face_recognition
 
 #Given an image, draw bounding boxes for all faces detected in the image
 #For each face in that image, predict the attributes of that face
@@ -48,182 +48,191 @@ import face_recognition
 #two tasks to do
 
 # 1) given a video, output JSON of all the features for each face found
-    #probably also need to assign each face an ID, and keep recognition throughout the frames
+	#probably also need to assign each face an ID, and keep recognition throughout the frames
 
 # 2) given a video and a JSON containing that information, produce a frame-by-frame visualization of the faces/attributes detected
 
 def main(args):
 
-    #MOON feature extractor; not sure how to make this a modular component
-    symbol = lightened_moon_feature(num_classes=40, use_fuse=True)
+	#MOON feature extractor; not sure how to make this a modular component
+	symbol = lightened_moon_feature(num_classes=40, use_fuse=True)
 
-    #the detector passed in from the command line; requires files in facenet/data/
-    detector = align_dlib.AlignDlib(os.path.expanduser(args.dlib_face_predictor))
+	#the detector passed in from the command line; requires files in facenet/data/
+	detector = align_dlib.AlignDlib(os.path.expanduser(args.dlib_face_predictor))
 
-    #fixed landmark indices; could make modular, but later
-    landmarkIndices = align_dlib.AlignDlib.OUTER_EYES_AND_NOSE
+	#fixed landmark indices; could make modular, but later
+	landmarkIndices = align_dlib.AlignDlib.OUTER_EYES_AND_NOSE
 
-    #TODO: change to a video file, and process by frame
-    video = cv2.VideoCapture(args.input_video)
+	#TODO: change to a video file, and process by frame
+	video = cv2.VideoCapture(args.input_video)
 
-    #TODO: this is the main problem: cropped_face refers to the already-aligned faces
-    # in this code, this face is used for a few things
-    #  1) to feed into the attribute classifier
-    #cropped_face = cv2.imread(args.cropped_img)
-    #scale = float(args.face_size) / args.image_size
-    #for now, solution is to ignore altogether
+	#TODO: this is the main problem: cropped_face refers to the already-aligned faces
+	# in this code, this face is used for a few things
+	#  1) to feed into the attribute classifier
+	#cropped_face = cv2.imread(args.cropped_img)
+	#scale = float(args.face_size) / args.image_size
+	#for now, solution is to ignore altogether
 
-    devs = mx.cpu()
+	devs = mx.cpu()
 
-    #begin to iterate over the frames and process them
-    ret, frame = video.read()
+	#begin to iterate over the frames and process them
+	ret, frame = video.read()
 
-    #a list of dictionaries containing face_output for each frame
-    total_output = []
+	#a list of dictionaries containing face_output for each frame
+	total_output = []
 
-    #maps encoding matrix to id number
-    known_faces_dict = dict()
-    known_faces_encoding = []
-    id_count = 0
+	#maps encoding matrix to id number
+	known_faces_dict = dict()
+	known_faces_encoding = []
+	id_count = 0
 
-    while ret is True:
-        face_boxes = detector.getAllFaceBoundingBoxes(frame)
-        id_attr, known_faces_dict, known_faces_encoding, id_count = processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes)
+	while ret is True:
+		face_boxes = detector.getAllFaceBoundingBoxes(frame)
+		id_attr, known_faces_dict, known_faces_encoding, id_count = processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes)
 
-        if total_output is None:
-            total_output = [id_attr]
-        else:
-            total_output.append(id_attr)
+		if total_output is None:
+			total_output = [id_attr]
+		else:
+			total_output.append(id_attr)
 
-        ret, frame = video.read()
+		ret, frame = video.read()
 
-    #==========TODO CONVERT TO JSON FILE===============
-    print(total_output)
+	#==========TODO CONVERT TO JSON FILE===============
+	print(total_output)
 
 def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes):
 
-    if len(face_boxes) == 0:
-        print('cannot find faces')
+	if len(face_boxes) == 0:
+		print('cannot find faces')
 
-    id_attr = dict()
+	id_attr = dict()
 
-    for box in face_boxes:
+	for box in face_boxes:
 
-        #=========CROP FACE==========
-        pad = [0.25, 0.25, 0.25, 0.25]
-        left = int(max(0, box.left() - box.width()*float(pad[0])))
-        top = int(max(0, box.top() - box.height()*float(pad[1])))
-        right = int(min(frame.shape[1], box.right() + box.width()*float(pad[2])))
-        bottom = int(min(frame.shape[0], box.bottom()+box.height()*float(pad[3])))
+		#=========CROP FACE==========
+		pad = [0.25, 0.25, 0.25, 0.25]
+		left = int(max(0, box.left() - box.width()*float(pad[0])))
+		top = int(max(0, box.top() - box.height()*float(pad[1])))
+		right = int(min(frame.shape[1], box.right() + box.width()*float(pad[2])))
+		bottom = int(min(frame.shape[0], box.bottom()+box.height()*float(pad[3])))
 
-        cropped_face = frame[top:bottom, left:right]
+		cropped_face = frame[top:bottom, left:right]
 
-        #=========DRAW BOUNDING BOX=========
-        '''
-        pad = [0.25, 0.25, 0.25, 0.25]
-        left = int(max(0, box.left() - box.width()*float(pad[0])))
-        top = int(max(0, box.top() - box.height()*float(pad[1])))
-        right = int(min(img.shape[1], box.right() + box.width()*float(pad[2])))
-        bottom = int(min(img.shape[0], box.bottom()+box.height()*float(pad[3])))
+		#=========DRAW BOUNDING BOX=========
+		'''
+		pad = [0.25, 0.25, 0.25, 0.25]
+		left = int(max(0, box.left() - box.width()*float(pad[0])))
+		top = int(max(0, box.top() - box.height()*float(pad[1])))
+		right = int(min(img.shape[1], box.right() + box.width()*float(pad[2])))
+		bottom = int(min(img.shape[0], box.bottom()+box.height()*float(pad[3])))
 
-        cv2.rectangle(img, (left, top), (right, bottom), (0,255,0),3) 
-        '''      
-        
-        #========EXTRACT ATTRIBUTES=======
-        # crop face area
-        gray = cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY)
-        gray = cv2.resize(gray, (128, 128))/255.0
-        #cv2.imshow('gray', gray)
-        #cv2.waitKey(0)
-        temp_img = np.expand_dims(np.expand_dims(gray, axis=0), axis=0)
-        # get pred
-        _, arg_params, aux_params = mx.model.load_checkpoint(args.model_load_prefix, args.model_load_epoch)
-        arg_params['data'] = mx.nd.array(temp_img, devs)
-        exector = symbol.bind(devs, arg_params ,args_grad=None, grad_req="null", aux_states=aux_params)
-        exector.forward(is_train=False)
-        exector.outputs[0].wait_to_read()
-        output = exector.outputs[0].asnumpy()
-        text = ["5_o_Clock_Shadow","Arched_Eyebrows","Attractive","Bags_Under_Eyes","Bald", "Bangs","Big_Lips","Big_Nose",
-                "Black_Hair","Blond_Hair","Blurry","Brown_Hair","Bushy_Eyebrows","Chubby","Double_Chin","Eyeglasses","Goatee",
-                "Gray_Hair", "Heavy_Makeup","High_Cheekbones","Male","Mouth_Slightly_Open","Mustache","Narrow_Eyes","No_Beard",
-                "Oval_Face","Pale_Skin","Pointy_Nose","Receding_Hairline","Rosy_Cheeks","Sideburns","Smiling","Straight_Hair",
-                "Wavy_Hair","Wearing_Earrings","Wearing_Hat","Wearing_Lipstick","Wearing_Necklace","Wearing_Necktie","Young"]
-        #pred = np.ones(40)
+		cv2.rectangle(img, (left, top), (right, bottom), (0,255,0),3) 
+		'''      
+		
+		#========EXTRACT ATTRIBUTES=======
+		# crop face area
+		gray = cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY)
+		gray = cv2.resize(gray, (128, 128))/255.0
+		#cv2.imshow('gray', gray)
+		#cv2.waitKey(0)
+		temp_img = np.expand_dims(np.expand_dims(gray, axis=0), axis=0)
+		# get pred
+		_, arg_params, aux_params = mx.model.load_checkpoint(args.model_load_prefix, args.model_load_epoch)
+		arg_params['data'] = mx.nd.array(temp_img, devs)
+		exector = symbol.bind(devs, arg_params ,args_grad=None, grad_req="null", aux_states=aux_params)
+		exector.forward(is_train=False)
+		exector.outputs[0].wait_to_read()
+		output = exector.outputs[0].asnumpy()
+		text = ["5_o_Clock_Shadow","Arched_Eyebrows","Attractive","Bags_Under_Eyes","Bald", "Bangs","Big_Lips","Big_Nose",
+				"Black_Hair","Blond_Hair","Blurry","Brown_Hair","Bushy_Eyebrows","Chubby","Double_Chin","Eyeglasses","Goatee",
+				"Gray_Hair", "Heavy_Makeup","High_Cheekbones","Male","Mouth_Slightly_Open","Mustache","Narrow_Eyes","No_Beard",
+				"Oval_Face","Pale_Skin","Pointy_Nose","Receding_Hairline","Rosy_Cheeks","Sideburns","Smiling","Straight_Hair",
+				"Wavy_Hair","Wearing_Earrings","Wearing_Hat","Wearing_Lipstick","Wearing_Necklace","Wearing_Necktie","Young"]
+		#pred = np.ones(40)
 
-        #=========WRITE ATTRIBUTES W/ YES NEXT TO BOUNDING BOX============
-        '''
-        yes_attributes = []
-        index = 0
+		#=========WRITE ATTRIBUTES W/ YES NEXT TO BOUNDING BOX============
+		'''
+		yes_attributes = []
+		index = 0
 
-        for num in output[0]:
-            if num > 0:
-                yes_attributes.append(text[index])
-            index+=1
+		for num in output[0]:
+			if num > 0:
+				yes_attributes.append(text[index])
+			index+=1
 
-        pad = 20
-        for attr in yes_attributes:
-            cv2.putText(img, attr, (right, top), cv2.FONT_HERSHEY_SIMPLEX, 0.25, (0,0,255), 2)
-            top = top + pad
-        '''
-        #========TODO ADD IN IDENTIFICATION==========
-
-
-        #========TODO WRITE ATTRIBUTES AND ID TO DICT===========
-
-        #this is tricky because there may be many faces in the frame
-        #so for each face in the frame (aka iterate through exector.outputs[index]) compile a dict
-
-        #trickier still: need to use the face_recognition library to compare faces.
-        # perhaps a dict used to store the list of known faces:id
-        # compare current unknown face with all the keys (known faces), and if nothing
-        # matches, add to dict with new id
-
-        #get encoding matrix of the face
-        face_enc = face_recognition.face_encodings(cropped_face)
-
-        if face_enc is None:
-            print('didnt catch this face')
-            continue
-
-	if len(face_enc) == 0:
-	    print('didnt catch this face with face_recognition')
-	    continue
-
-        face_enc = face_enc[0]
-	face_enc_hashable = face_enc.flatten()[0]
-	#print(face_enc_hashable[0])
-
-        if known_faces_encoding is None:
-            known_faces_dict[face_enc_hashable] = id_count
-            id_count += 1
-            continue
-
-        compare_results = face_recognition.compare_faces(known_faces_encoding, face_enc)
-
-        index = 0
-        identifier = None
-
-        while index < len(compare_results):
-            result = compare_results[index]
-            if result is True:
-                identifier = known_faces_encoding[index]
-                break
-
-        if identifier is None:
-            #add to dict and known encodings
-            known_faces_encoding.append(face_enc)
-            known_faces_dict[face_enc_hashable] = id_count
-            id_count += 1
-        else:
-            #get the encoding that was True via the index and add to json dict
-            similar_encoding = known_faces_encoding[index]
-	    similar_encoding_hash = similar_encoding.flatten()[0]
-            projected_id = known_faces_dict[similar_encoding_hash]
-
-            #TODO add to dictionary
+		pad = 20
+		for attr in yes_attributes:
+			cv2.putText(img, attr, (right, top), cv2.FONT_HERSHEY_SIMPLEX, 0.25, (0,0,255), 2)
+			top = top + pad
+		'''
+		#========TODO ADD IN IDENTIFICATION WITH MXNET-FACE CODE==========
 
 
-    return id_attr, known_faces_dict, known_faces_encoding, id_count
+		#========TODO WRITE ATTRIBUTES AND ID TO DICT===========
+
+		#this is tricky because there may be many faces in the frame
+		#so for each face in the frame (aka iterate through exector.outputs[index]) compile a dict
+
+		#trickier still: need to use the face_recognition library to compare faces.
+		# perhaps a dict used to store the list of known faces:id
+		# compare current unknown face with all the keys (known faces), and if nothing
+		# matches, add to dict with new id
+
+		#get encoding matrix of the face
+		#face_enc[0] is a 128-dim encoding for the face in question
+		print('trying to get encoding for this face:')
+		cv2.imshow('cropped face', cropped_face)
+		cv2.waitKey(0)
+		face_enc = face_recognition.face_encodings(cropped_face)
+
+		if face_enc is None:
+			print('didnt catch this face')
+			continue
+
+		if len(face_enc) == 0:
+			print('didnt catch this face with face_recognition')
+			continue
+
+		print('got the encoding; flattening and using first element as hash index')
+		face_enc = face_enc[0]
+		face_enc_hashable = face_enc.flatten()[0]
+		#print(face_enc_hashable[0])
+
+		if known_faces_encoding is None:
+			print('first known face!')
+			known_faces_dict[face_enc_hashable] = id_count
+			id_count += 1
+			print('added to dict of known faces')
+			continue
+
+		print('comparing with list of known faces')
+		compare_results = face_recognition.compare_faces(known_faces_encoding, face_enc)
+
+		index = 0
+		identifier = None
+
+		while index < len(compare_results):
+			result = compare_results[index]
+			if result is True:
+				identifier = known_faces_encoding[index]
+				break
+
+		if identifier is None:
+			#add to dict and known encodings
+			known_faces_encoding.append(face_enc)
+			known_faces_dict[face_enc_hashable] = id_count
+			id_count += 1
+		else:
+			#get the encoding that was True via the index and add to json dict
+			similar_encoding = known_faces_encoding[index]
+			similar_encoding_hash = similar_encoding.flatten()[0]
+			projected_id = known_faces_dict[similar_encoding_hash]
+
+			#TODO add to dictionary
+
+		print(id_attr)
+
+	return id_attr, known_faces_dict, known_faces_encoding, id_count
 
 
 
@@ -235,34 +244,34 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 # lightened_moon folder containing lightened_moon_fuse from model folder in mxnet-face
 
 def parse_arguments(argv):
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument('input_video', type=str, help='Target image.')
-    #parser.add_argument('cropped_img', type=str, help='Cropped face')
-    parser.add_argument('--dlib_face_predictor', type=str,
-        help='File containing the dlib face predictor.', default='../data/shape_predictor_68_face_landmarks.dat')
-    parser.add_argument('--image_size', type=int,
-        help='Image size (height, width) in pixels.', default=160)
-    parser.add_argument('--face_size', type=int,
-        help='Size of the face thumbnail (height, width) in pixels.', default=96)
-    parser.add_argument('--use_center_crop', 
-        help='Use the center crop of the original image after scaling the image using prealigned_scale.', action='store_true')
-    parser.add_argument('--prealigned_dir', type=str,
-        help='Replace image with a pre-aligned version when face detection fails.', default='')
-    parser.add_argument('--prealigned_scale', type=float,
-        help='The amount of scaling to apply to prealigned images before taking the center crop.', default=0.87)
+	parser = argparse.ArgumentParser()
+	
+	parser.add_argument('input_video', type=str, help='Target image.')
+	#parser.add_argument('cropped_img', type=str, help='Cropped face')
+	parser.add_argument('--dlib_face_predictor', type=str,
+		help='File containing the dlib face predictor.', default='../data/shape_predictor_68_face_landmarks.dat')
+	parser.add_argument('--image_size', type=int,
+		help='Image size (height, width) in pixels.', default=160)
+	parser.add_argument('--face_size', type=int,
+		help='Size of the face thumbnail (height, width) in pixels.', default=96)
+	parser.add_argument('--use_center_crop', 
+		help='Use the center crop of the original image after scaling the image using prealigned_scale.', action='store_true')
+	parser.add_argument('--prealigned_dir', type=str,
+		help='Replace image with a pre-aligned version when face detection fails.', default='')
+	parser.add_argument('--prealigned_scale', type=float,
+		help='The amount of scaling to apply to prealigned images before taking the center crop.', default=0.87)
 
-    parser.add_argument('--size', type=int, default=128,
-                        help='the image size of lfw aligned image, only support squre size')
-    #parser.add_argument('--opencv', type=str, default='~/Desktop/mxnet-face/model/opencv/cascade.xml',
-    #                    help='the opencv model path')
-    parser.add_argument('--pad', type=float, nargs='+',
-                                 help="pad (left,top,right,bottom) for face detection region")
-    parser.add_argument('--model-load-prefix', type=str, default='lightened_moon/lightened_moon_fuse',
-                        help='the prefix of the model to load')
-    parser.add_argument('--model-load-epoch', type=int, default=82,
-                        help='load the model on an epoch using the model-load-prefix')
-    return parser.parse_args(argv)
+	parser.add_argument('--size', type=int, default=128,
+						help='the image size of lfw aligned image, only support squre size')
+	#parser.add_argument('--opencv', type=str, default='~/Desktop/mxnet-face/model/opencv/cascade.xml',
+	#                    help='the opencv model path')
+	parser.add_argument('--pad', type=float, nargs='+',
+								 help="pad (left,top,right,bottom) for face detection region")
+	parser.add_argument('--model-load-prefix', type=str, default='lightened_moon/lightened_moon_fuse',
+						help='the prefix of the model to load')
+	parser.add_argument('--model-load-epoch', type=int, default=82,
+						help='load the model on an epoch using the model-load-prefix')
+	return parser.parse_args(argv)
 
 if __name__ == '__main__':
-    main(parse_arguments(sys.argv[1:]))
+	main(parse_arguments(sys.argv[1:]))
