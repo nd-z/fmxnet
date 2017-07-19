@@ -88,19 +88,19 @@ def main(args):
 
     while ret is True:
         face_boxes = detector.getAllFaceBoundingBoxes(frame)
-        id_attr, known_faces_dict, known_faces_encoding, id_count = processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes)
+        id_attr, known_faces_dict, known_faces_encoding, id_count = self.processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes)
 
         if total_output is None:
             total_output = [id_attr]
         else:
-            total_output.append(id_attr)
+            total_output = total_output.append(id_attr)
 
         ret, frame = video.read()
 
     #==========TODO CONVERT TO JSON FILE===============
     print(total_output)
 
-def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes):
+def processFrame(self, args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes):
 
     if len(face_boxes) == 0:
         print('cannot find faces')
@@ -113,8 +113,8 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
         pad = [0.25, 0.25, 0.25, 0.25]
         left = int(max(0, box.left() - box.width()*float(pad[0])))
         top = int(max(0, box.top() - box.height()*float(pad[1])))
-        right = int(min(frame.shape[1], box.right() + box.width()*float(pad[2])))
-        bottom = int(min(frame.shape[0], box.bottom()+box.height()*float(pad[3])))
+        right = int(min(img.shape[1], box.right() + box.width()*float(pad[2])))
+        bottom = int(min(img.shape[0], box.bottom()+box.height()*float(pad[3])))
 
         cropped_face = frame[top:bottom, left:right]
 
@@ -185,16 +185,10 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
             print('didnt catch this face')
             continue
 
-	if len(face_enc) == 0:
-	    print('didnt catch this face with face_recognition')
-	    continue
-
         face_enc = face_enc[0]
-	face_enc_hashable = face_enc.flatten()[0]
-	#print(face_enc_hashable[0])
 
         if known_faces_encoding is None:
-            known_faces_dict[face_enc_hashable] = id_count
+            known_faces_dict[face_enc] = id_count
             id_count += 1
             continue
 
@@ -211,19 +205,18 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 
         if identifier is None:
             #add to dict and known encodings
-            known_faces_encoding.append(face_enc)
-            known_faces_dict[face_enc_hashable] = id_count
+            known_faces_encoding = known_faces_encoding.append(face_enc)
+            known_faces_dict[face_enc] = id_count
             id_count += 1
         else:
             #get the encoding that was True via the index and add to json dict
             similar_encoding = known_faces_encoding[index]
-	    similar_encoding_hash = similar_encoding.flatten()[0]
-            projected_id = known_faces_dict[similar_encoding_hash]
+            projected_id = known_faces_dict[similar_encoding]
 
             #TODO add to dictionary
 
 
-    return id_attr, known_faces_dict, known_faces_encoding, id_count
+    return id_attr, known_faces_dict, known_faces_encoding
 
 
 
