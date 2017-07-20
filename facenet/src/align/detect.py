@@ -41,6 +41,7 @@ import pdb
 from lightened_moon import lightened_moon_feature
 import numpy as np
 import face_recognition
+import json
 
 #Given an image, draw bounding boxes for all faces detected in the image
 #For each face in that image, predict the attributes of that face
@@ -96,7 +97,47 @@ def main(args):
         ret, frame = video.read()
 
     #==========TODO CONVERT TO JSON FILE===============
-    print(total_output)
+    #print(total_output)
+    #ith element represents the ith frame
+    frame_num = 0
+    json_output = '{\r\n"frames":\r\n{\r\n"frame":\r\n[\r\n'
+    for frame_info in total_output:
+        #begin the num-faces entry
+        json_output += '{\r\n"num": '+str(frame_num)+',\r\n'
+        json_output += '"faces":\r\n[\r\n'
+        #TODO process the face information in frame_info in a loop
+        for face in frame_info.keys():
+            #get actual content, which is a list
+            #content shouldnt ever be empty, because there exists a key
+            #TODO may be a bug bc of this assumption
+            content = frame_info[face]
+            pid = content[0]
+
+            #check if content is length > 1
+            #there may be an individual with 0 yes-attributes
+            if len(content) == 1:
+                attributes = ['Negatives']
+                d = {pid:attributes} #looks like 0:[]
+                json_output += json.dumps(d)+',\r\n'
+                continue
+
+            attributes = content[1:len(content)-1]
+            d = {pid:attributes}
+            #now we have the proper split
+            json_output += json.dumps(d)+',\r\n'
+        #outside of loop
+        #TODO remove last occurrence of comma
+        json_output += ']\r\n' #close the faces array
+        json_output += '},\r\n' #close the num-faces entry
+        frame_num += 1
+    #TODO remove last occurrence of comma
+    json_output += '\r\n]\r\n}\r\n}'
+
+    #write out to file (it will be ugly)
+    f = open('output.json', 'wb')
+    f.write(json_output)
+    f.close()
+    print('done!')
 
 def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, symbol, detector, landmarkIndices, devs, face_boxes):
 
@@ -253,7 +294,7 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
             projected_id = known_faces_dict[similar_encoding_hash]
             id_l = [projected_id]
             id_l.extend(attr_list)
-            print('This should have at least one element: ' + str(id_l))
+            #print('This should have at least one element: ' + str(id_l))
             id_attr[face_num] = id_l
 
         face_num += 1
