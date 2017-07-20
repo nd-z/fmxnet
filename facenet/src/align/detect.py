@@ -127,10 +127,14 @@ def main(args):
             json_output += json.dumps(d)+',\r\n'
         #outside of loop
         #TODO remove last occurrence of comma
+        k = json_output.rfind(',')
+        json_output = json_output[:k] + json_output[k+1:]
         json_output += ']\r\n' #close the faces array
         json_output += '},\r\n' #close the num-faces entry
         frame_num += 1
     #TODO remove last occurrence of comma
+    k = json_output.rfind(',')
+    json_output = json_output[:k] + json_output[k+1:]
     json_output += '\r\n]\r\n}\r\n}'
 
     #write out to file (it will be ugly)
