@@ -96,7 +96,8 @@ def main(args):
 
         ret, frame = video.read()
 
-    #==========TODO CONVERT TO JSON FILE===============
+    #==========CONVERT TO JSON FILE===============
+    print('done processing; converting to json')
     #print(total_output)
     #ith element represents the ith frame
     frame_num = 0
@@ -104,8 +105,16 @@ def main(args):
     for frame_info in total_output:
         #begin the num-faces entry
         json_output += '{\r\n"num": '+str(frame_num)+',\r\n'
+        if len(frame_info.keys()) == 0:
+            #if this still isnt valid, try doing "faces": 0 and closing the field
+            # remove last occurrence of comma
+            k = json_output.rfind(',')
+            json_output = json_output[:k] + json_output[k+1:]
+            json_output += '},\r\n' #close the num-faces entry; no faces field
+            frame_num += 1
+            continue
         json_output += '"faces":\r\n[\r\n'
-        #TODO process the face information in frame_info in a loop
+        # process the face information in frame_info in a loop
         for face in frame_info.keys():
             #get actual content, which is a list
             #content shouldnt ever be empty, because there exists a key
@@ -126,18 +135,22 @@ def main(args):
             #now we have the proper split
             json_output += json.dumps(d)+',\r\n'
         #outside of loop
-        #TODO remove last occurrence of comma
+        # remove last occurrence of comma
         k = json_output.rfind(',')
         json_output = json_output[:k] + json_output[k+1:]
         json_output += ']\r\n' #close the faces array
         json_output += '},\r\n' #close the num-faces entry
         frame_num += 1
-    #TODO remove last occurrence of comma
+    # remove last occurrence of comma
     k = json_output.rfind(',')
     json_output = json_output[:k] + json_output[k+1:]
     json_output += '\r\n]\r\n}\r\n}'
 
-    #write out to file (it will be ugly)
+    d = json.loads(json_output)
+    json_output = json.dumps(d, indent=4, separators=(',', ': '))
+
+    #write out to file
+    print('done converting to json; writing to file')
     f = open('output.json', 'wb')
     f.write(json_output)
     f.close()
@@ -238,11 +251,11 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
         face_enc = face_recognition.face_encodings(cropped_face)
 
         if face_enc is None:
-            print('didnt catch this face')
+            #print('didnt catch this face')
             continue
 
         if len(face_enc) == 0:
-            print('didnt catch this face with face_recognition')
+            #print('didnt catch this face with face_recognition')
             continue
 
         #print('got the encoding; flattening and using first element as hash index')
@@ -252,12 +265,12 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
         #print(face_enc_hashable[0])
 
         if len(known_faces_encoding) == 0:
-            print('first known face!')
+            #print('first known face!')
             known_faces_dict[face_enc_hashable] = id_count
             known_faces_encoding = [face_enc]
             id_l = [id_count]
             id_l.extend(attr_list)
-            print('This should have at least one element: ' + str(id_l))
+            #print('This should have at least one element: ' + str(id_l))
             id_attr[face_num] = id_l
             id_count += 1
             #print('added to dict of known faces')
@@ -284,7 +297,7 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
             known_faces_dict[face_enc_hashable] = id_count
             id_l = [id_count]
             id_l.extend(attr_list)
-            print('This should have at least one element: ' + str(id_l))
+            #print('This should have at least one element: ' + str(id_l))
             id_attr[face_num] = id_l
             id_count += 1
             #print(known_faces_dict)
@@ -304,7 +317,7 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
         face_num += 1
 
     #after running on sample.mp4, should ideally have only 2 entries
-    print(id_attr)
+    #print(id_attr)
 
     return id_attr, known_faces_dict, known_faces_encoding, id_count
 
