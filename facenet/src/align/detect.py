@@ -101,7 +101,7 @@ def main(args):
     #print(total_output)
     #ith element represents the ith frame
     frame_num = 0
-    json_output = '{\r\n"frames":\r\n{\r\n"frame":\r\n[\r\n'
+    json_output = '{\r\n"video":\r\n{\r\n"frames":\r\n[\r\n'
     for frame_info in total_output:
         #begin the num-faces entry
         json_output += '{\r\n"num": '+str(frame_num)+',\r\n'
@@ -124,12 +124,17 @@ def main(args):
 
             #check if content is length > 1
             #there may be an individual with 0 yes-attributes
-            if len(content) == 1:
-                attributes = ['Negatives']
+            if len(content) == 3:
+                #attributes will contain the topleft,bottomright coordinates,
+                #followed by the attributes themselves
+                attributes = content[1:len(content)-1]
+                attributes.extend(['Negatives'])
                 d = {pid:attributes} #looks like 0:[]
                 json_output += json.dumps(d)+',\r\n'
                 continue
 
+            #attributes will contain the topleft, bottomright coordinates
+            #followed by the attributes themselves
             attributes = content[1:len(content)-1]
             d = {pid:attributes}
             #now we have the proper split
@@ -176,6 +181,9 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
         bottom = int(min(frame.shape[0], box.bottom()+box.height()*float(pad[3])))
 
         cropped_face = frame[top:bottom, left:right]
+
+        #array of two points: top left, bottom right
+        bounding_box_coordinates = [(top,left), (bottom,right)]
 
         #=========DRAW BOUNDING BOX=========
         '''
@@ -269,8 +277,10 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
             known_faces_dict[face_enc_hashable] = id_count
             known_faces_encoding = [face_enc]
             id_l = [id_count]
+            id_l.extend(bounding_box_coordinates)
             id_l.extend(attr_list)
-            #print('This should have at least one element: ' + str(id_l))
+
+            #save into the dictionary; id_l format is [id, (topleft), (bottomright), attr...]
             id_attr[face_num] = id_l
             id_count += 1
             #print('added to dict of known faces')
@@ -296,6 +306,7 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
             known_faces_encoding = np.append(known_faces_encoding, [face_enc], axis=0)
             known_faces_dict[face_enc_hashable] = id_count
             id_l = [id_count]
+            id_l.extend(bounding_box_coordinates)
             id_l.extend(attr_list)
             #print('This should have at least one element: ' + str(id_l))
             id_attr[face_num] = id_l
@@ -310,6 +321,7 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
             similar_encoding_hash = similar_encoding.flatten()[0]
             projected_id = known_faces_dict[similar_encoding_hash]
             id_l = [projected_id]
+            id_l.extend(bounding_box_coordinates)
             id_l.extend(attr_list)
             #print('This should have at least one element: ' + str(id_l))
             id_attr[face_num] = id_l
