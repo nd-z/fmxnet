@@ -179,6 +179,15 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 
         cropped_face = frame[top:bottom, left:right]
 
+        #align if specified
+        if args.align == 1:
+            scale = float(args.face_size) / args.image_size
+            cropped_face = detector.align(args.image_size, cropped_face, landmarkIndices=landmarkIndices, skipMulti=False, scale=scale)
+
+        if cropped_face is None:
+            print('failed to align! will not save this face\'s attributes or ID')
+            continue
+
         #array of two points: top left, bottom right
         bounding_box_coordinates = [(top,left), (bottom,right)]
 
@@ -325,12 +334,11 @@ def parse_arguments(argv):
 
     # custom options added by me
     parser.add_argument('--align', type=int,
-        help='Indicate whether faces should be aligned for feature extraction. 0=No, 1=Yes.', default=0)
-
-    # parser.add_argument('--image_size', type=int,
-    #     help='Image size (height, width) in pixels.', default=160)
-    # parser.add_argument('--face_size', type=int,
-    #     help='Size of the face thumbnail (height, width) in pixels.', default=96)
+        help='Indicate whether faces should be aligned for feature extraction, default is 0. 0=No, 1=Yes. If yes, specify --image_size and --face_size if needed.', default=0)
+    parser.add_argument('--image_size', type=int,
+        help='Image size (height, width) in pixels.', default=110)
+    parser.add_argument('--face_size', type=int,
+        help='Size of the face thumbnail (height, width) in pixels.', default=96)
     # parser.add_argument('--use_center_crop', 
     #     help='Use the center crop of the original image after scaling the image using prealigned_scale.', action='store_true')
     # parser.add_argument('--prealigned_dir', type=str,
