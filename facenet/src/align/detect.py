@@ -43,15 +43,12 @@ import numpy as np
 import face_recognition
 import json
 
-#Given an image, draw bounding boxes for all faces detected in the image
-#For each face in that image, predict the attributes of that face
-
 #two tasks to do
 
-# 1) given a video, output JSON of all the features for each face found
+#COMPLETE 1) given a video, output JSON of all the features for each face found
     #probably also need to assign each face an ID, and keep recognition throughout the frames
 
-# 2) given a video and a JSON containing that information, produce a frame-by-frame visualization of the faces/attributes detected
+#IN PROGRESS 2) given a video and a JSON containing that information, produce a frame-by-frame visualization of the faces/attributes detected
 
 def main(args):
 
@@ -64,7 +61,6 @@ def main(args):
     #fixed landmark indices; could make modular, but later
     landmarkIndices = align_dlib.AlignDlib.OUTER_EYES_AND_NOSE
 
-    #TODO: change to a video file, and process by frame
     video = cv2.VideoCapture(args.input_video)
 
     #TODO: this is the main problem: cropped_face refers to the already-aligned faces
@@ -166,8 +162,9 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
     if len(face_boxes) == 0:
         print('cannot find faces')
 
-    #list where first entry is id, rest are attributes for that id
-    #key is the face number
+    #list where first entry is id, 2nd and 3rd entries are bounding box coordiantes, 
+    #and rest are attributes for that id
+    #key is the face number, but that is not too relevant
     id_attr = dict()
 
     face_num = 0
@@ -194,14 +191,11 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
         bottom = int(min(img.shape[0], box.bottom()+box.height()*float(pad[3])))
 
         cv2.rectangle(img, (left, top), (right, bottom), (0,255,0),3) 
-        '''      
-        
+        '''
         #========EXTRACT ATTRIBUTES=======
-        # crop face area
+        # crop face area and resize as feature input
         gray = cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, (128, 128))/255.0
-        #cv2.imshow('gray', gray)
-        #cv2.waitKey(0)
         temp_img = np.expand_dims(np.expand_dims(gray, axis=0), axis=0)
         # get pred
         _, arg_params, aux_params = mx.model.load_checkpoint(args.model_load_prefix, args.model_load_epoch)
@@ -238,24 +232,7 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
             cv2.putText(img, attr, (right, top), cv2.FONT_HERSHEY_SIMPLEX, 0.25, (0,0,255), 2)
             top = top + pad
         '''
-        #========TODO ADD IN IDENTIFICATION WITH MXNET-FACE CODE==========
-
-
-        #========TODO WRITE ATTRIBUTES AND ID TO DICT===========
-
-        #this is tricky because there may be many faces in the frame
-        #so for each face in the frame (aka iterate through exector.outputs[index]) compile a dict
-
-        #trickier still: need to use the face_recognition library to compare faces.
-        # perhaps a dict used to store the list of known faces:id
-        # compare current unknown face with all the keys (known faces), and if nothing
-        # matches, add to dict with new id
-
-        #get encoding matrix of the face
-        #face_enc[0] is a row vector of shape (128,)
-        #print('trying to get encoding for this face:')
-        #cv2.imshow('cropped face', cropped_face)
-        #cv2.waitKey(0)
+        #========WRITE ATTRIBUTES AND ID TO DICT===========
         face_enc = face_recognition.face_encodings(cropped_face)
 
         if face_enc is None:
@@ -333,39 +310,40 @@ def processFrame(args, frame, known_faces_dict, known_faces_encoding, id_count, 
 
     return id_attr, known_faces_dict, known_faces_encoding, id_count
 
-
-
-#may need a helper method processFrame() to make code cleaner
-
 #currently, the following supporting files from mxnet-face and facenet are needed:
-# ../data/shape_predictor_68_face_landmarks.dat from facenet
+# ../data/shape_predictor_68_face_landmarks.dat from facenet (downloadable from repo)
 # lightened_moon.py from mxnet-face (should be in attribute)
 # lightened_moon folder containing lightened_moon_fuse from model folder in mxnet-face
 
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
-    
+
     parser.add_argument('input_video', type=str, help='Target image.')
     #parser.add_argument('cropped_img', type=str, help='Cropped face')
     parser.add_argument('--dlib_face_predictor', type=str,
         help='File containing the dlib face predictor.', default='../data/shape_predictor_68_face_landmarks.dat')
-    parser.add_argument('--image_size', type=int,
-        help='Image size (height, width) in pixels.', default=160)
-    parser.add_argument('--face_size', type=int,
-        help='Size of the face thumbnail (height, width) in pixels.', default=96)
-    parser.add_argument('--use_center_crop', 
-        help='Use the center crop of the original image after scaling the image using prealigned_scale.', action='store_true')
-    parser.add_argument('--prealigned_dir', type=str,
-        help='Replace image with a pre-aligned version when face detection fails.', default='')
-    parser.add_argument('--prealigned_scale', type=float,
-        help='The amount of scaling to apply to prealigned images before taking the center crop.', default=0.87)
 
-    parser.add_argument('--size', type=int, default=128,
-                        help='the image size of lfw aligned image, only support squre size')
-    #parser.add_argument('--opencv', type=str, default='~/Desktop/mxnet-face/model/opencv/cascade.xml',
-    #                    help='the opencv model path')
-    parser.add_argument('--pad', type=float, nargs='+',
-                                 help="pad (left,top,right,bottom) for face detection region")
+    # custom options added by me
+    parser.add_argument('--align', type=int,
+        help='Indicate whether faces should be aligned for feature extraction. 0=No, 1=Yes.', default=0)
+
+    # parser.add_argument('--image_size', type=int,
+    #     help='Image size (height, width) in pixels.', default=160)
+    # parser.add_argument('--face_size', type=int,
+    #     help='Size of the face thumbnail (height, width) in pixels.', default=96)
+    # parser.add_argument('--use_center_crop', 
+    #     help='Use the center crop of the original image after scaling the image using prealigned_scale.', action='store_true')
+    # parser.add_argument('--prealigned_dir', type=str,
+    #     help='Replace image with a pre-aligned version when face detection fails.', default='')
+    # parser.add_argument('--prealigned_scale', type=float,
+    #     help='The amount of scaling to apply to prealigned images before taking the center crop.', default=0.87)
+
+    # parser.add_argument('--size', type=int, default=128,
+    #                     help='the image size of lfw aligned image, only support squre size')
+    # #parser.add_argument('--opencv', type=str, default='~/Desktop/mxnet-face/model/opencv/cascade.xml',
+    # #                    help='the opencv model path')
+    # parser.add_argument('--pad', type=float, nargs='+',
+    #                              help="pad (left,top,right,bottom) for face detection region")
     parser.add_argument('--model-load-prefix', type=str, default='lightened_moon/lightened_moon_fuse',
                         help='the prefix of the model to load')
     parser.add_argument('--model-load-epoch', type=int, default=82,
