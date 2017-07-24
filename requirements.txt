@@ -1,0 +1,8 @@
+numpy
+scipy
+sklearn
+six
+lxml
+dlib
+tensorflow
+face_recognition
