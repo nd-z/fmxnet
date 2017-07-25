@@ -32,12 +32,21 @@ RUN make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 
 WORKDIR "python"
 
-#TODO how do I add this to the pythonpath?
-#ENV PYTHONPATH /mxnet/python
+ENV PYTHONPATH ""
 
 RUN python setup.py build
 RUN python setup.py install
+RUN cd ../../
+
+WORKDIR "facenet"
+WORKDIR "src"
+
+#does this work as intended?
+RUN export PYTHONPATH=$PYTHONPATH:$(pwd)
+
 #RUN cd ../../
 
 #run the detection script
-CMD ["python", "./facenet/src/align/detect.py"]
+#presumably, `docker run` runs the command below; so will `docker run video.mp4` be the
+# same thing as python ./align/detect.py video.mp4?
+CMD ["python", "./align/detect.py"]
