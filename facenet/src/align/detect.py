@@ -335,7 +335,7 @@ def parse_arguments(argv):
     parser.add_argument('--face_size', type=int,
         help='Size of the face thumbnail (height, width) in pixels.', default=96)
     parser.add_argument('--landmarkIndices', type=list,
-        help='specify your own landmark indices', default=align_dlib.AlignDlib.OUTER_EYES_AND_NOSE)
+        help='specify your own landmark indices as a list of three integers', default=align_dlib.AlignDlib.OUTER_EYES_AND_NOSE)
     # parser.add_argument('--use_center_crop', 
     #     help='Use the center crop of the original image after scaling the image using prealigned_scale.', action='store_true')
     # parser.add_argument('--prealigned_dir', type=str,
