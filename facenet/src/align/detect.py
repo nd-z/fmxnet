@@ -58,17 +58,12 @@ def main(args):
     #the detector passed in from the command line; requires files in facenet/data/
     detector = align_dlib.AlignDlib(os.path.expanduser(args.dlib_face_predictor))
 
-    #fixed landmark indices; could make modular, but later
     landmarkIndices = align_dlib.AlignDlib.OUTER_EYES_AND_NOSE
 
-    video = cv2.VideoCapture(args.input_video)
+    if args.landmarkIndices is not None:
+        landmarkIndices = args.landmarkIndices
 
-    #TODO: this is the main problem: cropped_face refers to the already-aligned faces
-    # in this code, this face is used for a few things
-    #  1) to feed into the attribute classifier
-    #cropped_face = cv2.imread(args.cropped_img)
-    #scale = float(args.face_size) / args.image_size
-    #for now, solution is to ignore altogether
+    video = cv2.VideoCapture(args.input_video)
 
     devs = mx.cpu()
 
@@ -339,6 +334,8 @@ def parse_arguments(argv):
         help='Image size (height, width) in pixels.', default=110)
     parser.add_argument('--face_size', type=int,
         help='Size of the face thumbnail (height, width) in pixels.', default=96)
+    parser.add_argument('--landmarkIndices', type=list,
+        help='specify your own landmark indices', default=align_dlib.AlignDlib.OUTER_EYES_AND_NOSE)
     # parser.add_argument('--use_center_crop', 
     #     help='Use the center crop of the original image after scaling the image using prealigned_scale.', action='store_true')
     # parser.add_argument('--prealigned_dir', type=str,
